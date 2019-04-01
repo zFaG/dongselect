@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Demo</title>
+  <link rel="stylesheet" href="./css/mobileSelect.css">
+</head>
+
+<body>
+  <div id="area-select">选择区域</div>
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
+  <script src="./js/mobileSelect.min.js"></script>
+  <script>
+    const request = ({
+      url,
+      type = 'post',
+      async = true,
+      data
+    }) => new Promise((resolve, reject) => {
+      $.ajax({
+        url,
+        async,
+        type,
+        data,
+        success(response) {
+          resolve(response)
+        }
+      })
+    })
+
+    const baseUrl = 'http://commonsbaserest.9itest.com'
+
+    const urls = {
+      getAreaByParentId: `${baseUrl}/common/data/baseArea/getAreaByParentId.do`
+    }
+
+    const getAreaByParentId = async parentId => request({
+      url: urls.getAreaByParentId,
+      data: {
+        parentId
+      }
+    })
+
+    const init = async () => {
+      const provincesParentId = '1bd310655978440d953c74711adf207d'
+      const { child: provinces } = await getAreaByParentId(provincesParentId)
+      const data = await Promise.all(provinces.map(async ({ id, name: value }) => {
+        const { child: cities } = await getAreaByParentId(id)
+        return {
+          id,
+          value,
+          childs: cities.length === 0 ? [] : await Promise.all(cities.map(async ({ id, name: value }) => {
+            const { child: districts } = await getAreaByParentId(id)
+            return {
+              id,
+              value,
+              childs: districts.length === 0 ? [] : districts.map(({ id, name: value }) => {
+                return {
+                  id,
+                  value
+                }
+              })
+            }
+          }))
+        }
+      }))
+
+      const areaSelect = new MobileSelect({
+        trigger: '#area-select',
+        title: '区域选择',
+        wheels: [
+          {
+            data
+          }
+        ],
+        position: [
+          0,
+          0,
+          0
+        ],
+        callback(index, data) {
+          console.log(data)
+        }
+      })
+    }
+
+    init()
+  </script>
+</body>
+
+</html>
